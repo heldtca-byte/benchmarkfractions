@@ -247,3 +247,4 @@ class BenchmarkFractionsApp:
                 y1,
                 x_end,
                 y1 +
+            )
