@@ -1,250 +1,173 @@
 import random
-import tkinter as tk
-from tkinter import messagebox
+import streamlit as st
+
+st.set_page_config(
+    page_title="Benchmark Fractions Explorer",
+    page_icon="➗",
+    layout="centered",
+)
+
+# Initialize session state for Quiz Mode
+if "quiz_num" not in st.session_state:
+    st.session_state.quiz_den = random.choice([3, 4, 5, 6, 8, 10, 12])
+    st.session_state.quiz_num = random.randint(0, st.session_state.quiz_den)
+    st.session_state.score = 0
+    st.session_state.total = 0
+    st.session_state.feedback = None
+    st.session_state.answered = False
 
 
-class BenchmarkFractionsApp:
+def get_closest_benchmark(n, d):
+    val = n / d
+    dist_0 = abs(val - 0.0)
+    dist_half = abs(val - 0.5)
+    dist_1 = abs(val - 1.0)
 
-    def __init__(self, root):
-        self.root = root
-        self.root.title("5th Grade Math: Benchmark Fractions Explorer")
-        self.root.geometry("760x580")
-        self.root.configure(bg="#F0F4F8")
+    min_dist = min(dist_0, dist_half, dist_1)
+    if min_dist == dist_1:
+        return 1.0, "1"
+    elif min_dist == dist_half:
+        return 0.5, "½"
+    else:
+        return 0.0, "0"
 
-        # Variables
-        self.num = tk.IntVar(value=3)
-        self.den = tk.IntVar(value=8)
-        self.quiz_mode = False
-        self.quiz_num = 1
-        self.quiz_den = 4
-        self.score = 0
-        self.total_questions = 0
 
-        self.setup_ui()
-        self.update_visuals()
-
-    def setup_ui(self):
-        # Header
-        header_frame = tk.Frame(self.root, bg="#1E3A8A", pady=15)
-        header_frame.pack(fill="x")
-
-        title = tk.Label(
-            header_frame,
-            text="Benchmark Fractions Explorer (0, ½, 1)",
-            font=("Arial", 20, "bold"),
-            fg="white",
-            bg="#1E3A8A",
+def draw_fraction_visual(
+    n, d, show_shaded=True, highlight_benchmark=None
+):
+    """Renders an HTML/SVG visual comparison of the fraction bar against 0, 1/2, and 1."""
+    part_width = 100 / d
+    boxes_html = ""
+    for i in range(d):
+        color = "#3B82F6" if (i < n and show_shaded) else "#F8FAFC"
+        boxes_html += (
+            f'<div style="width:{part_width}%; height:44px; '
+            f'background-color:{color}; border-right:2px solid #1E293B; '
+            'box-sizing:border-box;"></div>'
         )
-        title.pack()
 
-        subtitle = tk.Label(
-            header_frame,
-            text=(
-                "Use the sliders to explore how fractions compare to 0, ½, and"
-                " 1!"
-            ),
-            font=("Arial", 11),
-            fg="#DBEAFE",
-            bg="#1E3A8A",
+    c0 = "#16A34A" if highlight_benchmark == 0.0 else "#64748B"
+    ch = "#16A34A" if highlight_benchmark == 0.5 else "#64748B"
+    c1 = "#16A34A" if highlight_benchmark == 1.0 else "#64748B"
+
+    html = f"""
+    <div style="background:white; padding:24px 30px; border-radius:12px; border:1px solid #CBD5E1; margin: 12px 0;">
+        <div style="font-weight:bold; font-size:20px; color:#1E3A8A; margin-bottom:8px;">
+            Fraction: {n}/{d}
+        </div>
+        <div style="display:flex; width:100%; border:2px solid #1E293B; border-right:none; border-radius:4px; overflow:hidden;">
+            {boxes_html}
+        </div>
+
+        <div style="margin-top:28px; position:relative; height:36px; background:#F1F5F9; border:2px solid #64748B; border-radius:4px;">
+            <div style="position:absolute; left:50%; top:-8px; bottom:-8px; width:3px; background:#DC2626;"></div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; margin-top:10px; font-weight:bold; font-size:18px;">
+            <span style="color:{c0};">● 0</span>
+            <span style="color:{ch};">● ½</span>
+            <span style="color:{c1};">● 1</span>
+        </div>
+    </div>
+    """
+    st.markdown(html, unsafe_allow_html=True)
+
+
+def next_question():
+    st.session_state.quiz_den = random.choice([3, 4, 5, 6, 8, 10, 12])
+    st.session_state.quiz_num = random.randint(0, st.session_state.quiz_den)
+    st.session_state.feedback = None
+    st.session_state.answered = False
+
+
+# --- UI Layout ---
+st.title("➗ Benchmark Fractions Explorer (0, ½, 1)")
+st.write(
+    "Explore how fractions compare to the three main benchmarks: **0**, **½**, and **1**."
+)
+
+mode = st.radio(
+    "Choose Mode:",
+    ["Sandbox Explorer", "Practice Quiz"],
+    horizontal=True,
+)
+
+if mode == "Sandbox Explorer":
+    col1, col2 = st.columns(2)
+    with col1:
+        den = st.slider("Denominator (Bottom Number)", min_value=1, max_value=12, value=8)
+    with col2:
+        num = st.slider("Numerator (Top Number)", min_value=0, max_value=den, value=min(3, den))
+
+    closest_val, closest_str = get_closest_benchmark(num, den)
+    draw_fraction_visual(
+        num, den, show_shaded=True, highlight_benchmark=closest_val
+    )
+
+    half_of_den = den / 2
+    if num == 0:
+        reason = "0 pieces shaded means the fraction equals **0**."
+    elif num == den:
+        reason = f"All {den} pieces are shaded, which equals **1 whole**!"
+    elif num == half_of_den:
+        reason = f"{num} is exactly half of {den}, so it equals **½**!"
+    else:
+        reason = (
+            f"Half of {den} is **{half_of_den:g}**. Since {num} is closest to "
+            f"**{closest_str}**, the closest benchmark is **{closest_str}**."
         )
-        subtitle.pack()
 
-        # Mode Toggle Bar
-        mode_frame = tk.Frame(self.root, bg="#F0F4F8", pady=10)
-        mode_frame.pack()
+    st.success(f"**{num}/{den} is closest to {closest_str}** — {reason}")
 
-        self.mode_btn = tk.Button(
-            mode_frame,
-            text="Switch to Practice Quiz Mode",
-            font=("Arial", 11, "bold"),
-            bg="#0D9488",
-            fg="white",
-            padx=15,
-            pady=5,
-            relief="flat",
-            cursor="hand2",
-            command=self.toggle_mode,
-        )
-        self.mode_btn.pack()
+else:
+    qn = st.session_state.quiz_num
+    qd = st.session_state.quiz_den
+    correct_val, correct_str = get_closest_benchmark(qn, qd)
 
-        # Canvas for Visual Fraction Bars
-        self.canvas = tk.Canvas(
-            self.root,
-            width=680,
-            height=220,
-            bg="white",
-            highlightthickness=2,
-            highlightbackground="#CBD5E1",
-        )
-        self.canvas.pack(pady=10)
+    st.subheader(f"Which benchmark is **{qn}/{qd}** closest to?")
+    st.caption("Hint: Compare the numerator to half of the denominator!")
 
-        # Explanation / Status Banner
-        self.status_label = tk.Label(
-            self.root,
-            text="",
-            font=("Arial", 13, "bold"),
-            fg="#1E293B",
-            bg="#E2E8F0",
-            pady=10,
-            padx=20,
-            width=62,
-        )
-        self.status_label.pack(pady=5)
+    draw_fraction_visual(
+        qn,
+        qd,
+        show_shaded=st.session_state.answered,
+        highlight_benchmark=correct_val if st.session_state.answered else None,
+    )
 
-        # Container for Explore Controls vs Quiz Controls
-        self.controls_container = tk.Frame(self.root, bg="#F0F4F8")
-        self.controls_container.pack(pady=10, fill="x")
-
-        # --- EXPLORE FRAME ---
-        self.explore_frame = tk.Frame(self.controls_container, bg="#F0F4F8")
-
-        # Numerator Slider
-        num_frame = tk.Frame(self.explore_frame, bg="#F0F4F8")
-        num_frame.pack(pady=5)
-        tk.Label(
-            num_frame,
-            text="Numerator (Top Number):",
-            font=("Arial", 12, "bold"),
-            bg="#F0F4F8",
-            width=24,
-            anchor="e",
-        ).pack(side="left", padx=10)
-        self.num_slider = tk.Scale(
-            num_frame,
-            from_=0,
-            to=12,
-            orient="horizontal",
-            variable=self.num,
-            length=300,
-            font=("Arial", 10),
-            bg="#F0F4F8",
-            command=self.on_slider_change,
-        )
-        self.num_slider.pack(side="left")
-
-        # Denominator Slider
-        den_frame = tk.Frame(self.explore_frame, bg="#F0F4F8")
-        den_frame.pack(pady=5)
-        tk.Label(
-            den_frame,
-            text="Denominator (Bottom Number):",
-            font=("Arial", 12, "bold"),
-            bg="#F0F4F8",
-            width=24,
-            anchor="e",
-        ).pack(side="left", padx=10)
-        self.den_slider = tk.Scale(
-            den_frame,
-            from_=1,
-            to=12,
-            orient="horizontal",
-            variable=self.den,
-            length=300,
-            font=("Arial", 10),
-            bg="#F0F4F8",
-            command=self.on_slider_change,
-        )
-        self.den_slider.pack(side="left")
-
-        # --- QUIZ FRAME ---
-        self.quiz_frame = tk.Frame(self.controls_container, bg="#F0F4F8")
-
-        self.quiz_prompt = tk.Label(
-            self.quiz_frame,
-            text="",
-            font=("Arial", 14, "bold"),
-            bg="#F0F4F8",
-            fg="#0F172A",
-        )
-        self.quiz_prompt.pack(pady=5)
-
-        btn_row = tk.Frame(self.quiz_frame, bg="#F0F4F8")
-        btn_row.pack(pady=10)
-
-        for label, val in [
-            ("Closest to 0", 0.0),
-            ("Closest to ½", 0.5),
-            ("Closest to 1", 1.0),
+    if not st.session_state.answered:
+        b1, b2, b3 = st.columns(3)
+        for col, label, choice in [
+            (b1, "Closest to 0", 0.0),
+            (b2, "Closest to ½", 0.5),
+            (b3, "Closest to 1", 1.0),
         ]:
-            tk.Button(
-                btn_row,
-                text=label,
-                font=("Arial", 12, "bold"),
-                bg="#2563EB",
-                fg="white",
-                width=14,
-                pady=8,
-                relief="flat",
-                cursor="hand2",
-                command=lambda v=val: self.check_quiz_answer(v),
-            ).pack(side="left", padx=12)
+            if col.button(label, use_container_width=True):
+                st.session_state.total += 1
+                st.session_state.answered = True
+                if choice == correct_val:
+                    st.session_state.score += 1
+                    st.session_state.feedback = (
+                        "success",
+                        f"Correct! **{qn}/{qd}** is closest to **{correct_str}**.",
+                    )
+                else:
+                    st.session_state.feedback = (
+                        "error",
+                        f"Not quite! **{qn}/{qd}** is closest to **{correct_str}** "
+                        f"(half of {qd} is {qd/2:g}).",
+                    )
+                st.rerun()
 
-        self.score_label = tk.Label(
-            self.quiz_frame,
-            text="Score: 0 / 0",
-            font=("Arial", 11, "bold"),
-            bg="#F0F4F8",
-            fg="#475569",
-        )
-        self.score_label.pack(pady=5)
-
-        # Pack Explore Frame initially
-        self.explore_frame.pack()
-
-    def on_slider_change(self, _=None):
-        # Prevent improper fractions (> 1) to keep focus on 0, 1/2, 1 benchmarks
-        if self.num.get() > self.den.get():
-            self.num.set(self.den.get())
-        self.update_visuals()
-
-    def get_closest_benchmark(self, n, d):
-        val = n / d
-        dist_0 = abs(val - 0.0)
-        dist_half = abs(val - 0.5)
-        dist_1 = abs(val - 1.0)
-
-        min_dist = min(dist_0, dist_half, dist_1)
-        # Tie-breaking rounds up to the higher benchmark (standard estimation rule)
-        if min_dist == dist_1:
-            return 1.0, "1"
-        elif min_dist == dist_half:
-            return 0.5, "½"
+    if st.session_state.feedback:
+        msg_type, msg_text = st.session_state.feedback
+        if msg_type == "success":
+            st.success(msg_text)
         else:
-            return 0.0, "0"
+            st.error(msg_text)
 
-    def update_visuals(self):
-        self.canvas.delete("all")
+        if st.button("Next Question ➡️", type="primary"):
+            next_question()
+            st.rerun()
 
-        n = self.quiz_num if self.quiz_mode else self.num.get()
-        d = self.quiz_den if self.quiz_mode else self.den.get()
-
-        bar_x = 90
-        bar_width = 500
-        bar_height = 45
-
-        closest_val, closest_str = self.get_closest_benchmark(n, d)
-
-        # 1. Draw Student's Fraction Bar (Top)
-        y1 = 35
-        self.canvas.create_text(
-            bar_x - 45,
-            y1 + bar_height / 2,
-            text=f"{n}/{d}",
-            font=("Arial", 16, "bold"),
-            fill="#1E3A8A",
-        )
-
-        # In Quiz mode, hide the shaded fill until they guess so they use mental math!
-        part_width = bar_width / d
-        for i in range(d):
-            x_start = bar_x + (i * part_width)
-            x_end = x_start + part_width
-            fill_color = (
-                "#3B82F6" if (i < n and not self.quiz_mode) else "#F8FAFC"
-            )
-            self.canvas.create_rectangle(
-                x_start,
-                y1,
-                x_end,
-                y1 +
-            )
+    st.divider()
+    st.markdown(f"**Score:** {st.session_state.score} / {st.session_state.total}")
