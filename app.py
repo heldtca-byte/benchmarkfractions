@@ -35,42 +35,35 @@ def get_closest_benchmark(n, d):
 def draw_fraction_visual(
     n, d, show_shaded=True, highlight_benchmark=None
 ):
-    """Renders an HTML/SVG visual comparison of the fraction bar against 0, 1/2, and 1."""
+    """Renders an HTML visual comparison of the fraction bar against 0, 1/2, and 1."""
     part_width = 100 / d
-    boxes_html = ""
-    for i in range(d):
-        color = "#3B82F6" if (i < n and show_shaded) else "#F8FAFC"
-        boxes_html += (
-            f'<div style="width:{part_width}%; height:44px; '
-            f'background-color:{color}; border-right:2px solid #1E293B; '
-            'box-sizing:border-box;"></div>'
-        )
+    boxes_html = "".join(
+        f'<div style="width:{part_width}%; height:44px; '
+        f'background-color:{"#3B82F6" if (i < n and show_shaded) else "#F8FAFC"}; '
+        f'border-right:2px solid #1E293B; box-sizing:border-box;"></div>'
+        for i in range(d)
+    )
 
     c0 = "#16A34A" if highlight_benchmark == 0.0 else "#64748B"
     ch = "#16A34A" if highlight_benchmark == 0.5 else "#64748B"
     c1 = "#16A34A" if highlight_benchmark == 1.0 else "#64748B"
 
-    html = f"""
-    <div style="background:white; padding:24px 30px; border-radius:12px; border:1px solid #CBD5E1; margin: 12px 0;">
-        <div style="font-weight:bold; font-size:20px; color:#1E3A8A; margin-bottom:8px;">
-            Fraction: {n}/{d}
-        </div>
-        <div style="display:flex; width:100%; border:2px solid #1E293B; border-right:none; border-radius:4px; overflow:hidden;">
-            {boxes_html}
-        </div>
-
-        <div style="margin-top:28px; position:relative; height:36px; background:#F1F5F9; border:2px solid #64748B; border-radius:4px;">
-            <div style="position:absolute; left:50%; top:-8px; bottom:-8px; width:3px; background:#DC2626;"></div>
-        </div>
-
-        <div style="display:flex; justify-content:space-between; margin-top:10px; font-weight:bold; font-size:18px;">
-            <span style="color:{c0};">● 0</span>
-            <span style="color:{ch};">● ½</span>
-            <span style="color:{c1};">● 1</span>
-        </div>
-    </div>
-    """
-    st.markdown(html, unsafe_allow_html=True)
+    html = (
+        '<div style="font-family:sans-serif; background:white; padding:24px 30px; '
+        'border-radius:12px; border:1px solid #CBD5E1; margin: 12px 0;">'
+        f'<div style="font-weight:bold; font-size:20px; color:#1E3A8A; margin-bottom:8px;">Fraction: {n}/{d}</div>'
+        f'<div style="display:flex; width:100%; border:2px solid #1E293B; border-right:none; border-radius:4px; overflow:hidden;">{boxes_html}</div>'
+        '<div style="margin-top:28px; position:relative; height:36px; background:#F1F5F9; border:2px solid #64748B; border-radius:4px;">'
+        '<div style="position:absolute; left:50%; top:-8px; bottom:-8px; width:3px; background:#DC2626;"></div>'
+        '</div>'
+        '<div style="display:flex; justify-content:space-between; margin-top:10px; font-weight:bold; font-size:18px;">'
+        f'<span style="color:{c0};">● 0</span>'
+        f'<span style="color:{ch};">● ½</span>'
+        f'<span style="color:{c1};">● 1</span>'
+        '</div>'
+        '</div>'
+    )
+    st.html(html)
 
 
 def next_question():
